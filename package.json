@@ -1,0 +1,28 @@
+{
+  "name": "sprite-builder",
+  "version": "0.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "coffee src/index.coffee",
+    "build": "coffee -c -o dist src"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^1.5.2",
+    "gm": "^1.21.1",
+    "md5": "^2.0.0",
+    "mustache": "^2.2.1",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "coffee-script": "^1.10.0"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "lib"
+  ]
+}

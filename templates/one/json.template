@@ -1,0 +1,17 @@
+{
+  {{#sprites}}
+  "{{name}}": {
+    "name": "{{name}}",
+
+    "w": {{width}},
+    "h": {{height}},
+    "x": {{offsetX}},
+    "y": {{offsetY}},
+
+    "fw": {{frameWidth}},
+    "fh": {{frameHeight}},
+    "fx": {{frameRegX}},
+    "fy": {{frameRegY}}
+  }{{^isLast}},{{/isLast}}
+  {{/sprites}}
+}
