@@ -195,7 +195,7 @@
           name: name,
           file: info.file,
           width: info.size.width,
-          height: info.size.width,
+          height: info.size.height,
           offsetX: info.size.offsetX,
           offsetY: info.size.offsetY,
           canvasX: info.size.canvasX,
