@@ -94,59 +94,128 @@
   };
 
   canvasInfo = function() {
-    var args, callback, canvas, fit, i, padding, ref, result;
+    var args, callback, canvas, growing, height, horizontal, i, mapper, method, padding, ref, ref1, vertical, width;
     args = 3 <= arguments.length ? slice.call(arguments, 0, i = arguments.length - 2) : (i = 0, []), canvas = arguments[i++], callback = arguments[i++];
     padding = (ref = args[0]) != null ? ref : 0;
-    fit = function(sort) {
-      var blocks, blocksArea;
-      blocks = sort(_(canvas.sprites).map(function(info, key) {
-        return {
-          w: info.size.width + padding * 2,
-          h: info.size.height + padding * 2,
-          frameRegX: info.size.frameRegX,
-          frameRegY: info.size.frameRegY,
-          key: key
-        };
-      }));
-      gp.fit(blocks);
-      blocksArea = _(blocks).reduce((function(memo, b) {
-        return memo += b.w * b.h;
-      }), 0);
+    method = (ref1 = args[1]) != null ? ref1 : null;
+    width = null;
+    height = null;
+    mapper = function(info, key) {
       return {
-        width: gp.root.w,
-        height: gp.root.h,
-        blocks: blocks,
-        rate: blocksArea / (gp.root.w * gp.root.h)
+        w: info.size.width + padding * 2,
+        h: info.size.height + padding * 2,
+        frameRegX: info.size.frameRegX,
+        frameRegY: info.size.frameRegY,
+        key: key
       };
     };
-    result = _.chain([
-      function(blocks) {
-        return _(blocks).sortBy(function(b) {
-          return -b.w;
+    growing = function() {
+      var fit, result;
+      fit = function(sort) {
+        var blocks, blocksArea;
+        blocks = sort(_(canvas.sprites).map(mapper));
+        gp.fit(blocks);
+        blocksArea = _(blocks).reduce((function(memo, b) {
+          return memo += b.w * b.h;
+        }), 0);
+        return {
+          width: gp.root.w,
+          height: gp.root.h,
+          blocks: blocks,
+          rate: blocksArea / (gp.root.w * gp.root.h)
+        };
+      };
+      result = _.chain([
+        function(blocks) {
+          return _(blocks).sortBy(function(b) {
+            return -b.w;
+          });
+        }, function(blocks) {
+          return _(blocks).sortBy(function(b) {
+            return -b.h;
+          });
+        }, function(blocks) {
+          return _(blocks).sortBy(function(b) {
+            return -Math.max(b.w, b.h);
+          });
+        }
+      ]).map(fit).max(function(r) {
+        return r.rate;
+      }).value();
+      result.blocks.forEach(function(b) {
+        return _.extend(canvas.sprites[b.key].size, {
+          canvasX: b.fit.x - b.frameRegX + padding,
+          canvasY: b.fit.y - b.frameRegY + padding,
+          offsetX: b.fit.x + padding,
+          offsetY: b.fit.y + padding
         });
-      }, function(blocks) {
-        return _(blocks).sortBy(function(b) {
-          return -b.h;
-        });
-      }, function(blocks) {
-        return _(blocks).sortBy(function(b) {
-          return -Math.max(b.w, b.h);
-        });
-      }
-    ]).map(fit).max(function(r) {
-      return r.rate;
-    }).value();
-    result.blocks.forEach(function(b) {
-      return _.extend(canvas.sprites[b.key].size, {
-        canvasX: b.fit.x - b.frameRegX + padding,
-        canvasY: b.fit.y - b.frameRegY + padding,
-        offsetX: b.fit.x + padding,
-        offsetY: b.fit.y + padding
       });
-    });
+      width = result.width;
+      return height = result.height;
+    };
+    horizontal = function() {
+      var b, blocks, currentX, j, len, results1;
+      blocks = _(canvas.sprites).map(mapper);
+      currentX = 0;
+      width = 0;
+      height = 0;
+      results1 = [];
+      for (j = 0, len = blocks.length; j < len; j++) {
+        b = blocks[j];
+        _.extend(canvas.sprites[b.key].size, {
+          canvasX: currentX - b.frameRegX + padding,
+          canvasY: b.frameRegY + padding,
+          offsetX: currentX + padding,
+          offsetY: padding
+        });
+        currentX = currentX - b.frameRegX + padding + b.w;
+        width = currentX;
+        if (b.h > height) {
+          results1.push(height = b.h);
+        } else {
+          results1.push(void 0);
+        }
+      }
+      return results1;
+    };
+    vertical = function() {
+      var b, blocks, currentY, j, len, results1;
+      blocks = _(canvas.sprites).map(mapper);
+      currentY = 0;
+      width = 0;
+      height = 0;
+      results1 = [];
+      for (j = 0, len = blocks.length; j < len; j++) {
+        b = blocks[j];
+        _.extend(canvas.sprites[b.key].size, {
+          canvasX: b.frameRegX + padding,
+          canvasY: currentY - b.frameRegY + padding,
+          offsetX: padding,
+          offsetY: currentY + padding
+        });
+        currentY = currentY - b.frameRegY + padding + b.h;
+        height = currentY;
+        if (b.w > width) {
+          results1.push(width = b.w);
+        } else {
+          results1.push(void 0);
+        }
+      }
+      return results1;
+    };
+    switch (method) {
+      case 'horizontal':
+        horizontal();
+        break;
+      case 'vertical':
+        vertical();
+        break;
+      default:
+        growing();
+    }
     _.extend(canvas, {
-      width: result.width,
-      height: result.height
+      width: width,
+      height: height
     });
     if (typeof callback === 'function') {
       return callback(null, canvas);
@@ -262,6 +331,7 @@
       ext: '.png',
       trim: true,
       padding: 0,
+      method: 'growing',
       templates: ['json']
     };
     options = _.extend({}, defaultOptions, options);
@@ -315,13 +385,13 @@
   };
 
   processOne = function() {
-    var args, callback, i, options, ref, ref1, ref2, src;
+    var args, callback, i, options, ref, ref1, ref2, ref3, src;
     src = arguments[0], args = 3 <= arguments.length ? slice.call(arguments, 1, i = arguments.length - 1) : (i = 1, []), callback = arguments[i++];
     if (callback == null) {
       callback = function() {};
     }
     options = makeOptions(src, args[0], DEFAULT_TEMPLATES_ONE);
-    return async.waterfall([readSprites.bind(null, src, (ref = options.ext) != null ? ref : '.png'), readSizes.bind(null, (ref1 = options.trim) != null ? ref1 : true), canvasInfo.bind(null, (ref2 = options.padding) != null ? ref2 : 0), canvasImage.bind(null, options.dest), templateData, templateProcess.bind(null, options.templates)], callback);
+    return async.waterfall([readSprites.bind(null, src, (ref = options.ext) != null ? ref : '.png'), readSizes.bind(null, (ref1 = options.trim) != null ? ref1 : true), canvasInfo.bind(null, (ref2 = options.padding) != null ? ref2 : 0, (ref3 = options.method) != null ? ref3 : 'growing'), canvasImage.bind(null, options.dest), templateData, templateProcess.bind(null, options.templates)], callback);
   };
 
   processMany = function() {

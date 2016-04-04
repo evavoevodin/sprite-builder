@@ -64,38 +64,84 @@ readSizes = (args..., canvas, callback) ->
 
 canvasInfo = (args..., canvas, callback) ->
   padding = args[0] ? 0
-  fit = (sort) ->
-    blocks = sort _(canvas.sprites).map (info, key) ->
-      w        : info.size.width  + padding * 2
-      h        : info.size.height + padding * 2
-      frameRegX: info.size.frameRegX
-      frameRegY: info.size.frameRegY
-      key   : key
-    gp.fit blocks
-    blocksArea = _(blocks).reduce ((memo, b) -> memo += b.w * b.h), 0
-    return {
-      width : gp.root.w
-      height: gp.root.h
-      blocks: blocks
-      rate  : blocksArea / (gp.root.w * gp.root.h)
-    }
+  method = args[1] ? null
 
-  result = _.chain([
-    (blocks) -> _(blocks).sortBy (b) -> -b.w                # By width
-    (blocks) -> _(blocks).sortBy (b) -> -b.h                # By height
-    (blocks) -> _(blocks).sortBy (b) -> -Math.max(b.w, b.h) # By maxside
-  ]).map(fit).max((r) -> r.rate).value()
+  width = null
+  height = null
 
-  result.blocks.forEach (b) ->
-    _.extend canvas.sprites[b.key].size,
-      canvasX: b.fit.x - b.frameRegX + padding
-      canvasY: b.fit.y - b.frameRegY + padding
-      offsetX: b.fit.x + padding
-      offsetY: b.fit.y + padding
+  mapper = (info, key) ->
+    w        : info.size.width  + padding * 2
+    h        : info.size.height + padding * 2
+    frameRegX: info.size.frameRegX
+    frameRegY: info.size.frameRegY
+    key   : key
+
+  growing = ->
+    fit = (sort) ->
+      blocks = sort _(canvas.sprites).map mapper
+      gp.fit blocks
+      blocksArea = _(blocks).reduce ((memo, b) -> memo += b.w * b.h), 0
+      return {
+        width : gp.root.w
+        height: gp.root.h
+        blocks: blocks
+        rate  : blocksArea / (gp.root.w * gp.root.h)
+      }
+
+    result = _.chain([
+      (blocks) -> _(blocks).sortBy (b) -> -b.w                # By width
+      (blocks) -> _(blocks).sortBy (b) -> -b.h                # By height
+      (blocks) -> _(blocks).sortBy (b) -> -Math.max(b.w, b.h) # By maxside
+    ]).map(fit).max((r) -> r.rate).value()
+
+    result.blocks.forEach (b) ->
+      _.extend canvas.sprites[b.key].size,
+        canvasX: b.fit.x - b.frameRegX + padding
+        canvasY: b.fit.y - b.frameRegY + padding
+        offsetX: b.fit.x + padding
+        offsetY: b.fit.y + padding
+
+    width  = result.width
+    height = result.height
+
+  horizontal = ->
+    blocks = _(canvas.sprites).map mapper
+    currentX = 0
+    width = 0
+    height = 0
+    for b in blocks
+      _.extend canvas.sprites[b.key].size,
+        canvasX: currentX - b.frameRegX + padding
+        canvasY: b.frameRegY + padding
+        offsetX: currentX + padding
+        offsetY: padding
+      currentX = currentX - b.frameRegX + padding + b.w
+      width = currentX
+      if b.h > height then height = b.h
+
+  vertical = ->
+    blocks = _(canvas.sprites).map mapper
+    currentY = 0
+    width = 0
+    height = 0
+    for b in blocks
+      _.extend canvas.sprites[b.key].size,
+        canvasX: b.frameRegX + padding
+        canvasY: currentY - b.frameRegY + padding
+        offsetX: padding
+        offsetY: currentY + padding
+      currentY = currentY - b.frameRegY + padding + b.h
+      height = currentY
+      if b.w > width then width = b.w
+
+  switch method
+    when 'horizontal' then horizontal()
+    when 'vertical' then vertical()
+    else growing()
 
   _.extend canvas,
-    width : result.width
-    height: result.height
+    width : width
+    height: height
 
   if typeof callback == 'function'
     return callback(null, canvas)
@@ -179,6 +225,7 @@ makeOptions = (src, options = {}, templates = {}, destReplace = true) ->
     ext : '.png'
     trim: true
     padding: 0
+    method: 'growing'
     templates: ['json']
   options = _.extend {}, defaultOptions, options
 
@@ -217,7 +264,7 @@ processOne = (src, args..., callback = ->) ->
   async.waterfall [
     readSprites.bind null, src, options.ext ? '.png'
     readSizes.bind null, options.trim ? true
-    canvasInfo.bind null, options.padding ? 0
+    canvasInfo.bind null, options.padding ? 0, options.method ? 'growing'
     canvasImage.bind null, options.dest
     templateData
     templateProcess.bind null, options.templates

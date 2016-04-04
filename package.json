@@ -18,7 +18,8 @@
     "underscore": "^1.8.3"
   },
   "devDependencies": {
-    "coffee-script": "^1.10.0"
+    "coffee-script": "^1.10.0",
+    "git-hooks": "^1.0.2"
   },
   "files": [
     "dist",
