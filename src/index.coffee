@@ -19,11 +19,12 @@ DEFAULT_TEMPLATES_MANY =
     ext : '.json'
 
 
-readSprites = (src, ext = ".png", callback) ->
+readSprites = (src, ext = ".png", test = /\.png$/i, callback) ->
   fs.readdir src, (error, files) ->
     return callback(error) if error
 
     sprites = files
+      .filter (file) -> test.test(file)
       .map (file) -> path.join(src, file)
       .reduce (memo, file) ->
         base = path.basename(file, ext)
@@ -227,6 +228,7 @@ makeOptions = (src, options = {}, templates = {}, destReplace = true) ->
     padding: 0
     method: 'growing'
     templates: ['json']
+    filter: /\.png$/i
   options = _.extend {}, defaultOptions, options
 
   basename = path.basename(src)
@@ -262,7 +264,7 @@ processOne = (src, args..., callback = ->) ->
   options = makeOptions(src, args[0], DEFAULT_TEMPLATES_ONE)
 
   async.waterfall [
-    readSprites.bind null, src, options.ext ? '.png'
+    readSprites.bind null, src, options.ext ? '.png', options.filter ? /\.png$/i
     readSizes.bind null, options.trim ? true
     canvasInfo.bind null, options.padding ? 0, options.method ? 'growing'
     canvasImage.bind null, options.dest

@@ -35,16 +35,21 @@
     }
   };
 
-  readSprites = function(src, ext, callback) {
+  readSprites = function(src, ext, test, callback) {
     if (ext == null) {
       ext = ".png";
+    }
+    if (test == null) {
+      test = /\.png$/i;
     }
     fs.readdir(src, function(error, files) {
       var sprites;
       if (error) {
         return callback(error);
       }
-      sprites = files.map(function(file) {
+      sprites = files.filter(function(file) {
+        return test.test(file);
+      }).map(function(file) {
         return path.join(src, file);
       }).reduce(function(memo, file) {
         var base;
@@ -332,7 +337,8 @@
       trim: true,
       padding: 0,
       method: 'growing',
-      templates: ['json']
+      templates: ['json'],
+      filter: /\.png$/i
     };
     options = _.extend({}, defaultOptions, options);
     basename = path.basename(src);
@@ -385,13 +391,13 @@
   };
 
   processOne = function() {
-    var args, callback, i, options, ref, ref1, ref2, ref3, src;
+    var args, callback, i, options, ref, ref1, ref2, ref3, ref4, src;
     src = arguments[0], args = 3 <= arguments.length ? slice.call(arguments, 1, i = arguments.length - 1) : (i = 1, []), callback = arguments[i++];
     if (callback == null) {
       callback = function() {};
     }
     options = makeOptions(src, args[0], DEFAULT_TEMPLATES_ONE);
-    return async.waterfall([readSprites.bind(null, src, (ref = options.ext) != null ? ref : '.png'), readSizes.bind(null, (ref1 = options.trim) != null ? ref1 : true), canvasInfo.bind(null, (ref2 = options.padding) != null ? ref2 : 0, (ref3 = options.method) != null ? ref3 : 'growing'), canvasImage.bind(null, options.dest), templateData, templateProcess.bind(null, options.templates)], callback);
+    return async.waterfall([readSprites.bind(null, src, (ref = options.ext) != null ? ref : '.png', (ref1 = options.filter) != null ? ref1 : /\.png$/i), readSizes.bind(null, (ref2 = options.trim) != null ? ref2 : true), canvasInfo.bind(null, (ref3 = options.padding) != null ? ref3 : 0, (ref4 = options.method) != null ? ref4 : 'growing'), canvasImage.bind(null, options.dest), templateData, templateProcess.bind(null, options.templates)], callback);
   };
 
   processMany = function() {
