@@ -80,7 +80,7 @@ canvasInfo = (args..., canvas, callback) ->
   growing = ->
     fit = (sort) ->
       blocks = sort _(canvas.sprites).map mapper
-      gp.fit blocks
+      gp.fit blocks, args[2] ? null
       blocksArea = _(blocks).reduce ((memo, b) -> memo += b.w * b.h), 0
       return {
         width : gp.root.w
@@ -266,7 +266,7 @@ processOne = (src, args..., callback = ->) ->
   async.waterfall [
     readSprites.bind null, src, options.ext ? '.png', options.filter ? /\.png$/i
     readSizes.bind null, options.trim ? true
-    canvasInfo.bind null, options.padding ? 0, options.method ? 'growing'
+    canvasInfo.bind null, options.padding ? 0, options.method ? 'growing', options
     canvasImage.bind null, options.dest
     templateData
     templateProcess.bind null, options.templates
